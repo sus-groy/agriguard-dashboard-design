@@ -32,3 +32,6 @@ Pillow>=10.0                # Image processing for Vision API
 #   pip install -r requirements.txt pytest pytest-cov black mypy
 #
 # Or create a dev-requirements.txt for optional packages
+fastapi>=0.95
+python-multipart>=0.0.6
+uvicorn[standard]>=0.22.0
