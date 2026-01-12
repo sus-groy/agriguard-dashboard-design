@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agriguard - Diagnose</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Agriguard — Quick Diagnose</h1>
+
+    <form id="diagnose-form">
+      <label>Crop type
+        <select name="crop_type" id="crop_type">
+          <option value="tomato">Tomato</option>
+          <option value="potato">Potato</option>
+          <option value="corn">Corn</option>
+          <option value="wheat">Wheat</option>
+          <option value="lettuce">Lettuce</option>
+        </select>
+      </label>
+
+      <label>Region
+        <select name="region" id="region">
+          <option value="NORTH_AMERICA">NORTH_AMERICA</option>
+          <option value="EUROPE">EUROPE</option>
+          <option value="ASIA">ASIA</option>
+        </select>
+      </label>
+
+      <label>Image file
+        <input type="file" id="file" name="file" accept="image/*" required />
+      </label>
+
+      <div class="actions">
+        <button type="submit">Diagnose</button>
+        <span id="status" class="status"></span>
+      </div>
+    </form>
+
+    <section id="result" class="result">
+      <h2>Result</h2>
+      <pre id="json-output">No result yet.</pre>
+    </section>
+  </main>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>

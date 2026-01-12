@@ -34,4 +34,5 @@ Pillow>=10.0                # Image processing for Vision API
 # Or create a dev-requirements.txt for optional packages
 fastapi>=0.95
 python-multipart>=0.0.6
+google-generativeai>=0.3
 uvicorn[standard]>=0.22.0

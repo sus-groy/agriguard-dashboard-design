@@ -1,0 +1,11 @@
+* { box-sizing: border-box; font-family: Inter, system-ui, Arial, sans-serif; }
+body { margin: 0; padding: 1.25rem; background: #f7fafc; color: #0f172a; }
+.container { max-width: 760px; margin: 0 auto; background: #fff; padding: 1.25rem; border-radius: 8px; box-shadow: 0 6px 18px rgba(2,6,23,0.06); }
+h1 { margin-top: 0; }
+form label { display: block; margin: .5rem 0; }
+input[type=file] { display: block; margin-top: .25rem; }
+.actions { margin-top: .75rem; }
+button { background:#0ea5a4; color: white; border: none; padding: .5rem 1rem; border-radius: 6px; cursor: pointer; }
+.status { margin-left: .75rem; color: #334155; }
+.result { margin-top: 1rem; }
+pre { background:#0b1220; color:#e6eef8; padding: 1rem; border-radius: 6px; overflow:auto; }

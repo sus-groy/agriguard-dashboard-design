@@ -10,7 +10,11 @@ Endpoints:
 Run: uvicorn app.main:app --reload
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from fastapi.testclient import TestClient
 from typing import List, Optional
 from PIL import Image
@@ -46,10 +50,33 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Development CORS - allow local frontend dev servers
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # change to `origins` for stricter control
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Serve the minimal frontend from the backend to avoid CORS during local dev
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+
+@app.get("/")
+async def root_index():
+    return FileResponse("frontend/index.html")
+
 # Initialize components
 scoring_engine = ScoringEngine()
 chemical_db = ChemicalDatabase()
-gemini_client = GeminiDiagnosticClient()
+# Read Gemini API key from environment and pass to client
+gemini_client = GeminiDiagnosticClient(api_key=os.getenv("GOOGLE_API_KEY"))
 
 
 # ============================================================================
@@ -136,7 +163,11 @@ async def get_pest_treatments(pest_name: str, region: str = "NORTH_AMERICA"):
 # ============================================================================
 
 @app.post("/diagnose")
-async def diagnose_crop(crop_type: str, file: UploadFile = File(...), region: str = "NORTH_AMERICA"):
+async def diagnose_crop(
+    crop_type: str = Form(...),
+    file: UploadFile = File(...),
+    region: str = Form("NORTH_AMERICA"),
+):
     """
     Analyze crop image and return complete diagnostic result.
     
