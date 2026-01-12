@@ -306,3 +306,52 @@ class GeminiDiagnosticClient:
             "crop_type": crop_type,
             "image_path": image_path
         }
+
+    def analyze_image_b64(self, image_base64: str, crop_type: str = "tomato") -> Tuple[dict, dict]:
+        """
+        Analyze an image provided as a base64 string. If the Gemini client is not
+        initialized, this method returns a safe mocked response matching the
+        expected schema so the rest of the pipeline can run during development.
+
+        :param image_base64: Base64-encoded image bytes
+        :param crop_type: Crop type
+        :return: (diagnostic_result_dict, metadata)
+        """
+        # If real client available, use it
+        if self.client:
+            system_prompt = generate_diagnostic_prompt(crop_type)
+            user_msg = generate_user_message(image_base64)
+
+            response = self.client.generate_content(
+                [system_prompt, user_msg],
+                generation_config=get_gemini_config(crop_type)
+            )
+
+            response_text = response.text
+
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}") + 1
+
+            if json_start == -1 or json_end <= json_start:
+                raise ValueError("No valid JSON in response")
+
+            json_str = response_text[json_start:json_end]
+            result_dict = json.loads(json_str)
+
+            return result_dict, {"raw_response": response_text, "crop_type": crop_type}
+
+        # Fallback mocked analysis (safe for development/testing)
+        vlm_analysis = {
+            "crop": crop_type,
+            "identified_pest": "Early Blight (Alternaria solani)",
+            "raw_confidence": 0.82,
+            "visible_symptoms": [
+                "Concentric rings on lower leaves",
+                "Brown necrotic lesions",
+                "Yellow halo around lesions"
+            ],
+            "growth_stage": "vegetative",
+            "lesion_coverage_percent": 18.5,
+        }
+
+        return vlm_analysis, {"raw_response": "<mock>", "crop_type": crop_type}

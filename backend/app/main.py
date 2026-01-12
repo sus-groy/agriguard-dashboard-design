@@ -10,7 +10,8 @@ Endpoints:
 Run: uvicorn app.main:app --reload
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 from typing import List, Optional
 from PIL import Image
@@ -44,6 +45,15 @@ app = FastAPI(
     title="Agricultural Diagnostic Engine",
     description="AI-powered pest and disease diagnosis for crops",
     version="1.0.0"
+)
+
+# Allow frontend (development) to call the API. Adjust origins for production.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Initialize components
@@ -307,6 +317,121 @@ async def diagnose_crop(crop_type: str, file: UploadFile = File(...), region: st
         confidence_overall=recalculated_confidence
     )
     
+    return diagnostic_result.model_dump()
+
+
+@app.post("/diagnose_base64")
+async def diagnose_crop_base64(
+    crop_type: str = Body(...),
+    image_base64: str = Body(...),
+    region: str = Body("NORTH_AMERICA")
+):
+    """
+    Accept a JSON body containing `crop_type` and `image_base64` (base64 string).
+    This endpoint will call the Gemini client (if configured) or fallback to a
+    mocked VLM result. Returns the same DiagnosticResult JSON structure as
+    `/diagnose`.
+    """
+    # Validate region
+    try:
+        region_enum = Region[region]
+    except KeyError:
+        raise HTTPException(status_code=400, detail=f"Invalid region: {region}")
+
+    # Use gemini client to analyze base64 (or fallback)
+    try:
+        vlm_analysis, meta = gemini_client.analyze_image_b64(image_base64, crop_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"VLM analysis failed: {str(e)}")
+
+    # Recalculate with ScoringEngine
+    evidence_found = vlm_analysis.get('visible_symptoms', [])
+    required_evidence = ["necrotic lesion", "characteristic rings", "discoloration"]
+
+    recalculated_confidence = scoring_engine.calculate_confidence(
+        raw_prob=vlm_analysis.get('raw_confidence', 0.5),
+        evidence_found=evidence_found,
+        required_evidence=required_evidence
+    )
+
+    recalculated_severity = scoring_engine.calculate_severity(
+        lesion_area_pct=vlm_analysis.get('lesion_coverage_percent', 0.0),
+        growth_stage=vlm_analysis.get('growth_stage', 'vegetative')
+    )
+
+    # Lookup ChemicalDatabase
+    pest_name = vlm_analysis.get('identified_pest', 'unknown')
+    treatments = chemical_db.get_safe_treatment(pest_name, region_enum, crop_type)
+
+    # Build response (reuse same assembly as /diagnose)
+    evidence_list = [
+        VisualEvidence(description=s, confidence=0.85, location="Leaf surface")
+        for s in evidence_found
+    ]
+
+    diagnosis = Diagnosis(label=pest_name, confidence=recalculated_confidence, visual_evidence=evidence_list)
+
+    organic_treatments = [
+        OrganicTreatment(
+            treatment_name="Neem Oil Spray",
+            dosage="2-3%",
+            application_frequency="Every 7 days",
+            description="Natural oil spray effective against fungal diseases",
+            effectiveness_rate=0.65,
+        ),
+    ]
+
+    chemical_treatments = []
+    for db_treatment in treatments:
+        ppe_list = []
+        ppe_dict = db_treatment.get('ppe_required', {})
+        if isinstance(ppe_dict, dict):
+            if ppe_dict.get('gloves') and ppe_dict.get('gloves') != "None":
+                ppe_list.append(f"Gloves ({ppe_dict['gloves']})")
+            if ppe_dict.get('respirator') and ppe_dict.get('respirator') != "None":
+                ppe_list.append(f"Respirator ({ppe_dict['respirator']})")
+            if ppe_dict.get('eye_protection') and ppe_dict.get('eye_protection') != "None":
+                ppe_list.append(f"Eye protection ({ppe_dict['eye_protection']})")
+            if ppe_dict.get('clothing') and ppe_dict.get('clothing') != "None":
+                ppe_list.append(ppe_dict['clothing'])
+            if ppe_dict.get('boots') and ppe_dict.get('boots') != "None":
+                ppe_list.append(ppe_dict['boots'])
+        elif isinstance(ppe_dict, list):
+            ppe_list = ppe_dict
+        if not ppe_list:
+            ppe_list = ["Standard safety precautions"]
+
+        chem = ChemicalTreatment(
+            treatment_name=db_treatment['product_name'],
+            active_ingredient=db_treatment['active_ingredient'],
+            dosage=db_treatment['dosage'],
+            application_frequency=db_treatment['application_frequency'],
+            description=f"Pre-harvest interval: {db_treatment.get('pre_harvest_interval')} days",
+            effectiveness_rate=db_treatment['effectiveness_rate'],
+            safety_equipment=ppe_list,
+            re_entry_interval=str(db_treatment.get('re_entry_interval', '48 hours')),
+        )
+        chemical_treatments.append(chem)
+
+    treatment_plan = TreatmentPlan(organic_treatments=organic_treatments, chemical_treatments=chemical_treatments)
+
+    severity_analysis = SeverityAnalysis(
+        severity_index=SeverityLevel[recalculated_severity.upper()],
+        quantitative_score=recalculated_confidence,
+        stage=CropStage.VEGETATIVE,
+        affected_area_percentage=vlm_analysis.get('lesion_coverage_percent', 0.0),
+    )
+
+    economic_impact = EconomicImpact(yield_loss_estimate=f"{vlm_analysis.get('lesion_coverage_percent', 0.0):.1f}%", urgency_level=UrgencyLevel.MEDIUM)
+
+    diagnostic_result = DiagnosticResult(
+        diagnosis=diagnosis,
+        severity_analysis=severity_analysis,
+        economic_impact=economic_impact,
+        treatment_plan=treatment_plan,
+        confidence_overall=recalculated_confidence,
+    )
+
     return diagnostic_result.model_dump()
 
 
