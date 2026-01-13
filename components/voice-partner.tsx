@@ -1,34 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Mic, MicOff, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useVoice } from "@/context/VoiceContext"
 
 export function VoicePartner() {
-  const [isActive, setIsActive] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
-
-  const toggleVoice = () => {
-    if (isActive) {
-      // Disconnect
-      wsRef.current?.close()
-      setIsActive(false)
-      setIsConnected(false)
-    } else {
-      // Connect to Gemini Live API WebSocket
-      setIsActive(true)
-      // Simulating connection
-      setTimeout(() => setIsConnected(true), 1000)
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      wsRef.current?.close()
-    }
-  }, [])
+  const { isActive, isConnected, toggleVoice } = useVoice()
 
   return (
     <>
@@ -43,7 +21,7 @@ export function VoicePartner() {
                   {isConnected ? "Gemini Connected" : "Connecting..."}
                 </span>
               </div>
-              <Button size="icon" variant="ghost" onClick={() => setIsActive(false)} className="h-8 w-8">
+              <Button size="icon" variant="ghost" onClick={() => toggleVoice()} className="h-8 w-8">
                 <X className="h-4 w-4" />
               </Button>
             </div>

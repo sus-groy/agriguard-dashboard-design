@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Bug, Camera, Upload, X, Leaf, FlaskConical, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react"
+import { useVoice } from "@/context/VoiceContext"
 
 interface DiagnosisResult {
   pest: string
@@ -22,6 +23,7 @@ export function PestDiagnostic() {
   const [isDragging, setIsDragging] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<DiagnosisResult | null>(null)
+  const { updateContext } = useVoice()
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -55,9 +57,12 @@ export function PestDiagnostic() {
       })
       const data = await response.json()
       setResult(data)
+      updateContext(
+        `The farmer just scanned a plant with the following diagnosis: ${data.pest} (${data.confidence}% confidence). Primary organic treatment recommended: ${data.treatments.organic[0]}`,
+      )
     } catch (error) {
       // Mock result for demo
-      setResult({
+      const mockResult = {
         pest: "Aphids (Aphidoidea)",
         confidence: 92,
         treatments: {
@@ -69,7 +74,11 @@ export function PestDiagnostic() {
           ],
           chemical: ["Imidacloprid 0.5% SL", "Thiamethoxam 25% WG", "Acetamiprid 20% SP"],
         },
-      })
+      }
+      setResult(mockResult)
+      updateContext(
+        `The farmer just scanned a plant with the following diagnosis: ${mockResult.pest} (${mockResult.confidence}% confidence). Primary organic treatment recommended: ${mockResult.treatments.organic[0]}`,
+      )
     } finally {
       setIsAnalyzing(false)
     }
