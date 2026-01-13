@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { LayoutDashboard, Map, Bug, ListChecks, Mic, Menu, X, Leaf } from "lucide-react"
+import { LayoutDashboard, Map, Bug, ListChecks, Menu, X, Leaf } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -16,7 +16,6 @@ const navItems = [
   { id: "health-map", label: "Health Map", icon: Map },
   { id: "diagnostic", label: "Diagnostic", icon: Bug },
   { id: "strategy", label: "Strategy", icon: ListChecks },
-  { id: "voice", label: "Voice", icon: Mic },
 ]
 
 export function MobileSidebar({ activeView, onViewChange }: MobileSidebarProps) {
